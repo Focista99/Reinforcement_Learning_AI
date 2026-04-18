@@ -1,0 +1,4 @@
+MAP_NAME = "4x4"
+IS_SLIPPERY = False
+RENDER_MODE = "human"
+PAUSE_BETWEEN_STEPS = 0.2  
