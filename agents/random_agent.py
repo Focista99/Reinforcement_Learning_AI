@@ -5,4 +5,12 @@ class RandomAgent:
         self.action_space = action_space
 
     def select_action(self, observation):
+        """Selects an action randomly from the action space.
+
+        Args:
+            observation (_type_): The current observation from the environment (not used in this agent). 
+
+        Returns:
+            _type_: A randomly selected action from the action space.
+        """
         return self.action_space.sample()
