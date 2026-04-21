@@ -8,7 +8,8 @@ def make_base_env(seed=None):
 
     Generates an 8x8 U-Boot grid map with 15% mine density and wraps it
     inside a standard Gymnasium FrozenLake environment with no slipperiness
-    and no render mode.
+    and no render mode. The TimeLimit wrapper is removed to allow the
+    FuelWrapper to control episode termination based on fuel depletion.
 
     Args:
         seed (int, optional): Random seed passed to the map generator for
@@ -16,17 +17,20 @@ def make_base_env(seed=None):
 
     Returns:
         gymnasium.Env: Unwrapped FrozenLake-v1 environment configured with
-            the generated map.
+            the generated map, without TimeLimit wrapper.
     """
     grid_size = 8
     uboat_map = generate_map(grid=grid_size, density=0.15, seed=seed)
-    
-    return gym.make(
+
+    env = gym.make(
         "FrozenLake-v1",
         desc=uboat_map,
         is_slippery=False,
-        render_mode=None
+        render_mode=None,
+        max_episode_steps=None  # Remove time limit to let fuel mechanic control episode length
     )
+
+    return env
 
 
 def make_env(seed=None):
@@ -54,14 +58,14 @@ def make_env(seed=None):
             observation space and the custom reward and fuel mechanics.
     """
     from env.wrappers import ObsWrapper, RewWrapper, FuelWrapper
-    
+
     grid_size = 8
     uboat_map = generate_map(grid=grid_size, density=0.15, seed=seed)
-    
+
     env = make_base_env(seed=seed)
-    
+
     env = ObsWrapper(env, grid_map=uboat_map)
     env = FuelWrapper(env)
     env = RewWrapper(env)
-    
+
     return env
