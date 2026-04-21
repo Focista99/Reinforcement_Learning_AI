@@ -83,6 +83,6 @@ You can modify the environment parameters by editing the `resources/config.py` f
 
 ## Authors
 
-- Iago Mendez Garcia 
+- Iago Mendez García 
 - Pablo Crespo de la Cruz
-- Carlos Segovia Dominguez
+- Carlos Segovia Domínguez
