@@ -21,7 +21,6 @@ def run_frozen_lake_episode():
         action = agent.select_action(observation)
         observation, reward, done, truncated, info = env.step(action)
         steps += 1
-        # Se elimina env.render() de aquí porque causa el bloqueo al terminar
         time.sleep(PAUSE_BETWEEN_STEPS)
 
     if reward == 1:
