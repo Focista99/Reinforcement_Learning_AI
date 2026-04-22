@@ -19,9 +19,9 @@ def run_frozen_lake_episode():
 
     while not (done or truncated):
         action = agent.select_action(observation)
-        observation, reward, terminated, truncated, info = env.step(action)
+        observation, reward, done, truncated, info = env.step(action)
         steps += 1
-        env.render()
+        # Se elimina env.render() de aquí porque causa el bloqueo al terminar
         time.sleep(PAUSE_BETWEEN_STEPS)
 
     if reward == 1:
