@@ -51,6 +51,11 @@ class ObsWrapper(ObservationWrapper):
                     cell = self.grid_map[r][c]
                 else:
                     cell = self.grid_map[r, c] if isinstance(self.grid_map, np.ndarray) else self.grid_map[r][c]
+
+                if isinstance(cell, bytes):
+                    cell = cell.decode("utf-8")
+                elif isinstance(cell, np.str_):
+                    cell = str(cell)
                     
                 if cell == 'H':
                     self._mines.append((r, c))
