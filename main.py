@@ -11,7 +11,11 @@ if __name__ == "__main__":
     print("  U-BOOT V2")
     print("=" * 50)
 
-    env = Monitor(make_env())
+    # FIX: use a fixed seed so the agent always trains on the same map
+    # and the animation uses that exact same map
+    SEED = 42
+
+    env = Monitor(make_env(seed=SEED))
     agent = Agent()
 
     print("\nTraining (10,000 episodes)...")
@@ -23,4 +27,5 @@ if __name__ == "__main__":
     plot_training(reward_history, success_history)
     plt.close("all")
 
-    run_animation(agent)
+    # Pass the seed so the animation reuses the trained map
+    run_animation(agent, seed=SEED)

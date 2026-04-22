@@ -41,10 +41,11 @@ def make_env(seed=None):
 
     1. ``ObsWrapper``  — transforms the discrete cell index into a
     continuous 4-feature observation vector.
-    2. ``FuelWrapper`` — introduces a fuel constraint that truncates the
-    episode when fuel is exhausted.
-    3. ``RewWrapper``  — replaces the sparse binary reward with a denser
+    2. ``RewWrapper``  — replaces the sparse binary reward with a denser
     reward scheme.
+    3. ``FuelWrapper`` — introduces a fuel constraint that truncates the
+    episode when fuel is exhausted. Placed on top so its -2.0 penalty
+    is not overwritten by RewWrapper.
 
     The same procedurally generated map is shared between the base
     environment and ``ObsWrapper`` to guarantee consistency.
@@ -65,7 +66,7 @@ def make_env(seed=None):
     env = make_base_env(seed=seed)
 
     env = ObsWrapper(env, grid_map=uboat_map)
-    env = FuelWrapper(env)
-    env = RewWrapper(env)
+    env = RewWrapper(env)   # FIX: RewWrapper before FuelWrapper so the fuel
+    env = FuelWrapper(env)  # penalty (-2.0) is not overwritten by RewWrapper
 
     return env

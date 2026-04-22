@@ -125,8 +125,11 @@ class RewWrapper(RewardWrapper):
                 modified reward.
         """
         obs, reward, terminated, truncated, info = self.env.step(action)
-        
-        if terminated:
+
+        # If FuelWrapper already set a penalty (fuel depleted), respect it
+        if info.get("fuel_depleted"):
+            new_reward = -2.0
+        elif terminated:
             if reward == 1.0:
                 new_reward = 10.0
             else:
@@ -137,9 +140,14 @@ class RewWrapper(RewardWrapper):
         return obs, new_reward, terminated, truncated, info
 
 
-class FuelWrapper(ActionWrapper):
+# FIX: inherit from Wrapper instead of ActionWrapper.
+# ActionWrapper.step() already calls self.action() internally, so inheriting
+# from it and also calling self.action() manually inside step() caused the
+# action to be transformed TWICE — the agent learned on transitions that never
+# actually happened, producing a garbage Q-table.
+class FuelWrapper(Wrapper):
     """
-    Action wrapper that introduces a fuel constraint for the agent.
+    Wrapper that introduces a fuel constraint for the agent.
 
     When fuel drops below 20% of its maximum value, upward (0) or leftward (3)
     movement actions are randomly redirected to downward (1) or rightward (2),
@@ -158,20 +166,10 @@ class FuelWrapper(ActionWrapper):
         self.max_fuel = fuel
         self.fuel = fuel
 
-    def action(self, action):
-        """
-        Modifies the action when fuel is critically low.
-
-        Args:
-            action (int): Original action selected by the policy.
-
-        Returns:
-            int: Possibly redirected action (1 or 2) if fuel is low and the
-                original action was 0 or 3; otherwise the original action
-                unchanged.
-        """
-        if self.fuel <= self.max_fuel * 0.2 and action in (0, 3): 
-            return random.choice([1, 2]) 
+    def _maybe_redirect(self, action):
+        """Redirects action when fuel is critically low."""
+        if self.fuel <= self.max_fuel * 0.2 and action in (0, 3):
+            return random.choice([1, 2])
         return action
 
     def reset(self, **kwargs):
@@ -191,8 +189,8 @@ class FuelWrapper(ActionWrapper):
 
     def step(self, action):
         """
-        Executes one step, decrements fuel by one unit, and applies the
-        critical-fuel logic.
+        Executes one step, decrements fuel, applies the critical-fuel redirect,
+        and truncates the episode if fuel is exhausted.
 
         Args:
             action (int): Action selected by the policy.
@@ -204,18 +202,19 @@ class FuelWrapper(ActionWrapper):
                 and the reward is ``-2.0``.
         """
         self.fuel -= 1
-        
-        modified_action = self.action(action)
-        
-        obs, reward, terminated, truncated, info = self.env.step(modified_action)
-        
+
+        # Apply redirection directly — no double-transform bug possible here
+        action = self._maybe_redirect(action)
+
+        obs, reward, terminated, truncated, info = self.env.step(action)
+
         if self.fuel <= 0 and not (terminated or truncated):
             truncated = True
-            reward = -2.0 
+            reward = -2.0
             info["fuel_depleted"] = True
         else:
             info["fuel_depleted"] = False
-            
+
         info["fuel_remaining"] = self.fuel
         return obs, reward, terminated, truncated, info
 
