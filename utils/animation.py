@@ -196,17 +196,14 @@ def run_animation(agent, n=6, seed=None):
         if s_idx >= len(path):
             state["hold_frames"] += 1
             if state["hold_frames"] > 12: 
-                # --- RESET PARA LA SIGUIENTE MISIÓN ---
+
                 state["mission_idx"] = (m_idx + 1) % n
                 state["step_idx"] = 0
                 state["hold_frames"] = 0
                 
-                # 1. Escondemos el cartel de resultado
                 text_result.set_visible(False)
                 text_result.get_bbox_patch().set_alpha(0)
                 
-                # 2. Limpiamos solo los datos de la estela y el submarino
-                # NO USAMOS ax_map.cla() para no borrar los artistas
                 line_trail.set_data([], [])
                 marker_sub.set_data([], [])
                 label_u.set_visible(False) 

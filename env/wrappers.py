@@ -100,51 +100,75 @@ class ObsWrapper(ObservationWrapper):
             
         return np.array([norm_r, norm_c, norm_dist_goal, norm_dist_mine], dtype=np.float32)
 
-
 class RewWrapper(RewardWrapper):
     """
-    Reward wrapper that replaces the environment's original reward signal with
-    a more informative reward scheme.
-
-    Scheme applied:
-        - Successful episode (original reward == 1.0): ``+10.0``
-        - Mine collision (terminated without success):  ``-5.0``
-        - Ordinary step (non-terminal):                 ``-0.01``
+    Reward wrapper that implements a 'Reward Shaping' technique to provide 
+    denser feedback to the agent during training.
+    
+    Instead of a sparse reward, it calculates the progress made towards the 
+    goal based on the distance provided by the observation vector.
     """
+
+    def __init__(self, env):
+        super().__init__(env)
+        # Store the distance from the previous step to calculate progress
+        self.prev_dist = None
+
+    def reset(self, **kwargs):
+        """
+        Resets the environment and initializes the starting distance to goal.
+        
+        Returns:
+            tuple: (observation, info)
+        """
+        obs, info = self.env.reset(**kwargs)
+        
+        # According to ObsWrapper, index 2 is 'dist_goal_norm'
+        self.prev_dist = obs[2]
+        return obs, info
 
     def step(self, action):
         """
-        Executes one step in the environment and replaces the reward
-        according to the defined scheme.
-
+        Executes one environment step and calculates the reward based on 
+        terminal states and distance-based progress.
+        
         Args:
-            action: Action to execute in the underlying environment.
-
+            action (int): The action performed by the agent.
+            
         Returns:
-            tuple: ``(obs, new_reward, terminated, truncated, info)`` with the
-                modified reward.
+            tuple: (obs, new_reward, terminated, truncated, info)
         """
         obs, reward, terminated, truncated, info = self.env.step(action)
 
-        # If FuelWrapper already set a penalty (fuel depleted), respect it
+        # 1. Extract current distance to goal from the observation vector
+        curr_dist = obs[2]
+
+        # 2. Calculate progress (positive if closer, negative if further)
+        # progress > 0 means the distance decreased
+        progress = self.prev_dist - curr_dist
+        
+        # 3. Update previous distance for the next step calculation
+        self.prev_dist = curr_dist
+
+        # 4. Determine final reward value
         if info.get("fuel_depleted"):
+            # Penalty for running out of fuel
             new_reward = -2.0
         elif terminated:
             if reward == 1.0:
+                # Big bonus for reaching the convoy
                 new_reward = 10.0
             else:
+                # Penalty for hitting a mine
                 new_reward = -5.0
         else:
-            new_reward = -0.01
+            # Dense reward: base step penalty + weighted progress bonus
+            # We use a multiplier (2.0) to make the signal more significant
+            new_reward = -0.01 + (progress * 2.0)
             
         return obs, new_reward, terminated, truncated, info
-
-
-# FIX: inherit from Wrapper instead of ActionWrapper.
-# ActionWrapper.step() already calls self.action() internally, so inheriting
-# from it and also calling self.action() manually inside step() caused the
-# action to be transformed TWICE — the agent learned on transitions that never
-# actually happened, producing a garbage Q-table.
+    
+    
 class FuelWrapper(Wrapper):
     """
     Wrapper that introduces a fuel constraint for the agent.
